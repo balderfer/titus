@@ -2,8 +2,17 @@ var audio, context, analyser, source, fbcArray, iteration, currentTime, isRunnin
 // Initialize variables for beat detection on different levels.
 var genVolume, genThreshold, genDecay, pGenVolume, genThresholdSetTime, genDiffArray;
 var bassVolume, bassThreshold, bassDecay, pBassVolume, bassThresholdSetTime, bassDiffArray;
+var useMic;
 
 isRunning = false;
+useMic = true;
+
+if (!navigator.getUserMedia){
+  navigator.getUserMedia = navigator.getUserMedia
+    || navigator.webkitGetUserMedia
+    || navigator.mozGetUserMedia
+    || navigator.msGetUserMedia;
+}
 
 var BeatDiff = function(value, volume){
   this.value = value;
@@ -41,7 +50,37 @@ var Titus = {
     return currentTime;
   },
 
+  initMic: function(e, titusContext){
+    audio = e;
+    isRunning = true;
+    titusContext.initBeatData();
+    context = new AudioContext();
+    analyser = context.createAnalyser();
+    source = context.createMediaStreamSource(e);
+    source.connect(analyser);
+    analyser.connect(context.destination);
+
+    iteration = 0;
+    var loop = setInterval(function() {
+      audioLoop();
+    }, 1000 / 60);
+  },
+
   init: function(pathToSong) {
+    console.log(useMic);
+    console.log(navigator.getUserMedia);
+    if (useMic && navigator.getUserMedia){
+      console.log("helol world");
+      var titusContext = this;
+      navigator.getUserMedia(
+        {audio:true},
+        function(e){
+          titusContext.initMic(e, titusContext);
+        }, function(e) {
+          alert('Error capturing audio.');
+      });
+      return;
+    }
     isRunning = true;
     this.initAudio(pathToSong);
     this.initBeatData();
