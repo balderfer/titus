@@ -1,10 +1,15 @@
-var Titus, audio, context, analyser, source, fbcArray, iteration, volume, pVolume, beatHold, beatDecay, beatHoldSetTime, currentTime, beatDiff, avgBeatDiff, deltaBeatDiff, beatHoldDelay;
+var Titus, audio, context, analyser, source, fbcArray, iteration, volume, pVolume, beatHold, beatDecay, beatHoldSetTime, currentTime, beatDiff, avgBeatDiff, deltaBeatDiff;
 var canvas, ctx;
 var bassSum, bassVolume;
 
 var accBeatDiff, accBeatDiffMin, audioStartTime;
 
 var waveformHeight = 100;
+
+var BeatDiff = function(value, volume){
+  this.value = value;
+  this.volume = volume;
+};
 
 var audioLoop = function() {
   iteration++;
@@ -64,10 +69,9 @@ var Titus = {
     beatHold = 0;
     pVolume = 0;
     volume = 0;
-    beatDecay = -0.5;
+    beatDecay = -0.25;
     beatHoldSetTime = Date.now();
     beatDiff = [];
-    beatHoldDelay = 500;
     accBeatDiff = [];
     accBeatDiffMin = 10000000;
   },
@@ -121,13 +125,15 @@ var Titus = {
     // and is greater than 20 frames from previous beat detection.
     // Otherwise decay the previous BH.
     if (volume > beatHold && volume < pVolume && tempBeatDiff >= (60000 / 180)) {
+      // since volume is less than pVolume that means pVolume is actually
+      // the highest value we've seen so far
       beatHold = pVolume;
       beatHoldSetTime = currentTime;
-      beatDiff.push(tempBeatDiff);
+      beatDiff.push(new BeatDiff(tempBeatDiff, pVolume));
       this.calcAvgBeatDiff();
       ctx.fillStyle = 'yellow';
       ctx.fillRect(0, waveformHeight, canvas.width, canvas.height - waveformHeight)
-    } else if (tempBeatDiff > 0) {
+    } else {
       beatHold += beatDecay
     }
     ctx.fillRect(0, canvas.height-beatHold, canvas.width, 1)
@@ -140,14 +146,25 @@ var Titus = {
     var j = 0;
     var fireBeat = false;
     var epsilon = 0.1;
-    for (j; j < i; j++){
-      var b1 = beatDiff[i];
-      var b2 = beatDiff[j];
-      var avg = (b1 + b2) / 2;
-      if (Math.abs(b1 - b2) < epsilon*avg){
-        beatHoldDelay = avg;
+    var totalAverageVolume = 0;
+    for (var i = 0; i < currentIndex; i++){
+      var current = beatDiff[currentIndex];
+      var past = beatDiff[i];
+      var avgValue = (current.value + past.value) / 2;
+      var avgVolume = (current.volume + past.volume) / 2;
+      totalAverageVolume += current.volume;
+      totalAverageVolume * ((i - 1) / i);
+
+
+      if (Math.abs(avgVolume - totalAverageVolume) < epsilon * totalAverageVolume){
+        // lol idk maybe this is useful
+      }
+
+      if (Math.abs(current.value - past.value) < epsilon * avgValue
+          || Math.abs(current.volume - past.volume) < epsilon * avgVolume){
         // accBeatDiff.push(avg);
         fireBeat = true;
+        break;
         //this.fireBeatEvent();
       }
     }
@@ -169,7 +186,7 @@ var Titus = {
     ctx.fillStyle = color;
     ctx.fillRect(context.currentTime*40, 20, 1, 80);
     ctx.font="8px Georgia";
-    ctx.fillText(beatDiff[beatDiff.length-1], context.currentTime*40 - 8, 10);
+    ctx.fillText(beatDiff[beatDiff.length-1].value, context.currentTime*40 - 8, 10);
   },
 
   createControlPlayer: function(audio) {
