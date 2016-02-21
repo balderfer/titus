@@ -1,10 +1,9 @@
-var Titus, audio, context, analyser, source, fbcArray, iteration, volume, pVolume, beatHold, beatDecay, beatHoldSetTime, currentTime, beatDiff, avgBeatDiff, deltaBeatDiff;
-var canvas, ctx;
-var bassSum, bassVolume;
+var audio, context, analyser, source, fbcArray, iteration, currentTime, isRunning;
+// Initialize variables for beat detection on different levels.
+var genVolume, genThreshold, genDecay, pGenVolume, genThresholdSetTime, genDiffArray;
+var bassVolume, bassThreshold, bassDecay, pBassVolume, bassThresholdSetTime, bassDiffArray;
 
-var accBeatDiff, accBeatDiffMin, audioStartTime;
-
-var waveformHeight = 100;
+isRunning = false;
 
 var BeatDiff = function(value, volume){
   this.value = value;
@@ -13,37 +12,40 @@ var BeatDiff = function(value, volume){
 
 var audioLoop = function() {
   iteration++;
-  currentTime = Date.now();
+  currentTime = context.currentTime;
   fbcArray = new Uint8Array(analyser.frequencyBinCount);
   analyser.getByteFrequencyData(fbcArray);
   cleanFbcArray();
 
-  Titus.updateVisualizer();
+  Titus.updateTital();
 };
 
+// Remove trailing zeros from end of fbcArray
 var cleanFbcArray = function() {
   var i = fbcArray.length - 1;
-  while (i >= 0) {
-    if (fbcArray[i] > 0) {
-      break;
-    }
-    i--;
+  for (i; i >= 0; i--) {
+    if (fbcArray[i] > 0) break;
   }
   fbcArray = fbcArray.slice(0, i+1);
 }
 
 var Titus = {
-  init: function(pathToSong) {
-    
-    // Initialize audio file
-    this.initAudio(pathToSong);
-    // Initialize the audio statistics
-    this.initAudioStats();
-    // Initialize the canvas
-    this.initCanvas();
-    // Append the control player to div
-    this.createControlPlayer(audio);
+  getWaveformArray: function() {
+    if (isRunning)
+      return fbcArray;
+    else
+      return null;
+  },
 
+  getCurrentTime: function() {
+    return currentTime;
+  },
+
+  init: function(pathToSong) {
+    isRunning = true;
+    this.initAudio(pathToSong);
+    this.initBeatData();
+    this.createControlPlayer(audio);
     context = new AudioContext();
     analyser = context.createAnalyser();
     source = context.createMediaElementSource(audio);
@@ -51,7 +53,6 @@ var Titus = {
     analyser.connect(context.destination);
 
     iteration = 0;
-
     var loop = setInterval(function() {
       audioLoop();
     }, 1000 / 60);
@@ -65,128 +66,102 @@ var Titus = {
     audio.autoplay = true;
   },
 
-  initAudioStats: function() {
-    beatHold = 0;
-    pVolume = 0;
-    volume = 0;
-    beatDecay = -0.25;
-    beatHoldSetTime = Date.now();
-    beatDiff = [];
-    accBeatDiff = [];
-    accBeatDiffMin = 10000000;
+  initBeatData: function() {
+    var decay = -1;
+    // General
+    genThreshold = 0;
+    genDecay = decay;
+    pGenVolume = 0;
+    genThresholdSetTime = 0;
+    genDiffArray = [];
+    // Bass
+    bassThreshold = 0;
+    bassDecay = decay / 50;
+    pBassVolume = 0;
+    bassThresholdSetTime = 0;
+    bassDiffArray = [];
   },
 
-  initCanvas: function() {
-    canvas = document.getElementById('visualizer');
-    ctx = canvas.getContext('2d');
-    canvas.width = 5000;
-    canvas.height = 300 + waveformHeight;
-  },
+  updateTital: function() {    
+    var i = 0;
+    var genSum = 0;
+    var bassSum = 0;
 
-  updateVisualizer: function() {
-    var i, levels, sum;
-    ctx.clearRect(0, waveformHeight, canvas.width, canvas.height-100);
-    ctx.fillStyle = '#00CCFF';
-    
-    i = 0;
-    levels = fbcArray.length;
-    sum = 0;
-    bassSum = 0;
-
-    while (i < levels) {
-      // Draw bar for sound levels
-      ctx.fillRect(i, canvas.height-fbcArray[i], 1, fbcArray[i]);
-      
-      // Sum array values
-      sum += fbcArray[i];
-
-      // Sum bass values
-      if (i < levels / 8) bassSum += fbcArray[i];
-      i += 1;
+    for (i; i < fbcArray.length; i++) {
+      genSum += fbcArray[i];
+      if (i < fbcArray.length / 48) bassSum += fbcArray[i];
     }
-
-    // Calculate volume
-    volume = sum / levels;
-    this.updateVolume();
-    // Update beat hold
-    this.updateBeatHold();
+    // Detect general beat
+    genVolume = genSum / fbcArray.length;
+    this.detectBeat(genVolume, genThreshold, genDecay, pGenVolume, genThresholdSetTime, genDiffArray, function(genDetectionResults) {
+      genThreshold = genDetectionResults[3];
+      pGenVolume = genDetectionResults[4];
+      genThresholdSetTime = genDetectionResults[5];
+      genDiffArray = genDetectionResults[6];
+      if (genDetectionResults[0] && genDetectionResults[1]) {
+        this.fireEvent('beat', {'value': genDetectionResults[6]});
+      }
+    }.bind(this));
+    // Detect bass beat
+    bassVolume = bassSum / fbcArray.length;
+    this.detectBeat(bassVolume, bassThreshold, bassDecay, pBassVolume, bassThresholdSetTime, bassDiffArray, function(bassDetectionResults) {
+      bassThreshold = bassDetectionResults[3];
+      pBassVolume = bassDetectionResults[4];
+      bassThresholdSetTime = bassDetectionResults[5];
+      bassDiffArray = bassDetectionResults[6];
+      if (bassDetectionResults[0] && bassDetectionResults[1]) {
+        this.fireEvent('bass', {'value': bassDecay[2]});
+      }
+    }.bind(this));
   },
 
-  updateVolume: function() {
-    ctx.fillStyle = '#E74C3C';
-    ctx.fillRect(canvas.width-30, canvas.height-volume, 30, volume);
-    var scaledVolume = volume*(100/256);
-    ctx.fillRect(context.currentTime*40, 100-scaledVolume, 1, scaledVolume);
-  },
-
-  updateBeatHold: function() {
-    var tempBeatDiff = Math.abs(currentTime - beatHoldSetTime);
-    // Update BH if volume surpasses previous BH, is no longer increasing,
-    // and is greater than 20 frames from previous beat detection.
-    // Otherwise decay the previous BH.
-    if (volume > beatHold && volume < pVolume && tempBeatDiff >= (60000 / 180)) {
-      // since volume is less than pVolume that means pVolume is actually
-      // the highest value we've seen so far
-      beatHold = pVolume;
-      beatHoldSetTime = currentTime;
-      beatDiff.push(new BeatDiff(tempBeatDiff, pVolume));
-      this.calcAvgBeatDiff();
-      ctx.fillStyle = 'yellow';
-      ctx.fillRect(0, waveformHeight, canvas.width, canvas.height - waveformHeight)
+  detectBeat: function(beatVolume, beatThreshold, beatDecay, pBeatVolume, beatThresholdSetTime, beatDiffArray, cb) {
+    // console.log('detectBeat');
+    var beatDiff = Math.abs(context.currentTime - beatThresholdSetTime);
+    var beatDetected = false;
+    var results = [false, null];
+    // console.log('beatVolume: ' + beatVolume);
+    // console.log('beatThreshold: ' + beatThreshold);
+    if (beatVolume > beatThreshold && beatVolume < pBeatVolume && beatDiff >= (60 / 180)) {
+      beatDetected = true;
+      beatDiffArray.push(new BeatDiff(beatDiff, pBeatVolume));
+      results = this.verifyBeat(beatDiffArray);
+      if (results[0]) {
+        beatThreshold = pBeatVolume;
+        beatThresholdSetTime = currentTime;
+      }
     } else {
-      beatHold += beatDecay
+      beatThreshold += beatDecay;
     }
-    ctx.fillRect(0, canvas.height-beatHold, canvas.width, 1)
-    pVolume = volume;
+    pBeatVolume = beatVolume;
+    cb([beatDetected, results[0], results[1], beatThreshold, pBeatVolume, beatThresholdSetTime, beatDiffArray]);
   },
 
-  calcAvgBeatDiff: function() {
-    var i = beatDiff.length - 1;
-    if (i < 0) i = 0;
-    var j = 0;
-    var fireBeat = false;
+  verifyBeat: function(beatDiffArray) {
+    var currentIndex = beatDiffArray.length - 1;
+    if (currentIndex < 0) currentIndex = 0;
+    var shouldFireBeatEvent = false;
     var epsilon = 0.1;
     var totalAverageVolume = 0;
-    for (var i = 0; i < currentIndex; i++){
-      var current = beatDiff[currentIndex];
-      var past = beatDiff[i];
+    for (var i = 0; i < currentIndex; i++) {
+      var current = beatDiffArray[currentIndex];
+      var past = beatDiffArray[i];
       var avgValue = (current.value + past.value) / 2;
       var avgVolume = (current.volume + past.volume) / 2;
       totalAverageVolume += current.volume;
-      totalAverageVolume * ((i - 1) / i);
-
-
-      if (Math.abs(avgVolume - totalAverageVolume) < epsilon * totalAverageVolume){
-        // lol idk maybe this is useful
-      }
-
+      // totalAverageVolume * ((i - 1) / i); // Not sure what this is for @Scott
       if (Math.abs(current.value - past.value) < epsilon * avgValue
-          || Math.abs(current.volume - past.volume) < epsilon * avgVolume){
-        // accBeatDiff.push(avg);
-        fireBeat = true;
+          || Math.abs(current.volume - past.volume) < epsilon * avgVolume) {
+        shouldFireBeatEvent = true;
         break;
-        //this.fireBeatEvent();
       }
     }
-    if (fireBeat) {
-      // this.fireBeatEvent();
-      this.addEventToGraph('black');
-    } else {
-      this.addEventToGraph('blue');
-    }
+    return [shouldFireBeatEvent, avgValue];
   },
 
-  fireBeatEvent: function() {
-    var event = new CustomEvent('beat');
+  fireEvent: function(eventType, data) {
+    var event = new CustomEvent(eventType);
     document.dispatchEvent(event);
-    this.addEventToGraph();
-  },
-
-  addEventToGraph: function(color) {
-    ctx.fillStyle = color;
-    ctx.fillRect(context.currentTime*40, 20, 1, 80);
-    ctx.font="8px Georgia";
-    ctx.fillText(beatDiff[beatDiff.length-1].value, context.currentTime*40 - 8, 10);
   },
 
   createControlPlayer: function(audio) {
