@@ -1,0 +1,29 @@
+{
+  "name": "titus",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "scss": "node-sass --output-style nested --indent-type tab --indent-width 4 -o dist/css/ src/scss/base.scss",
+    "autoprefixer": "postcss -u autoprefixer -r dist/css/*",
+    "uglify": "mkdir -p dist/js && uglifyjs src/js/*.js -b -o dist/js/app.js",
+    "serve": "browser-sync start --server --files 'index.html, dist/*'",
+    "build:css": "npm run scss && npm run autoprefixer",
+    "build:js": "npm run uglify",
+    "build:html": "cp src/index.html index.html",
+    "build:audio": "cp -r src/audio dist",
+    "build:all": "npm run build:css && npm run build:js && npm run build:html && npm run build:audio",
+    "watch:css": "onchange 'src/scss/*.scss' -- npm run build:css",
+    "watch:js": "onchange 'src/js/*.js' -- npm run build:js",
+    "watch:html": "onchange 'src/*.html' -- npm run build:html",
+    "watch:all": "npm run build:all && parallelshell 'npm run serve' 'npm run watch:css' 'npm run watch:js' 'npm run watch:html'"
+  },
+  "devDependencies": {
+    "autoprefixer": "^6.3.3",
+    "browser-sync": "^2.11.1",
+    "node-sass": "^3.4.2",
+    "onchange": "^2.0.0",
+    "parallelshell": "^2.0.0",
+    "postcss-cli": "^2.5.1",
+    "uglify-js": "^2.6.1"
+  }
+}
