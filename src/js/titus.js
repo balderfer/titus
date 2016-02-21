@@ -1,12 +1,12 @@
 var Titus, audio, context, analyser, source, fbcArray, iteration, volume, pVolume, beatHold, beatDecay, beatHoldSetTime, currentTime, beatDiff, avgBeatDiff, deltaBeatDiff, beatHoldDelay;
 var canvas, ctx;
+var bassSum, bassVolume;
 
 var accBeatDiff, accBeatDiffMin, audioStartTime;
 
 var waveformHeight = 100;
 
 var audioLoop = function() {
-  window.requestAnimationFrame(audioLoop);
   iteration++;
   currentTime = Date.now();
   fbcArray = new Uint8Array(analyser.frequencyBinCount);
@@ -46,7 +46,10 @@ var Titus = {
     analyser.connect(context.destination);
 
     iteration = 0;
-    audioLoop();
+
+    var loop = setInterval(function() {
+      audioLoop();
+    }, 1000 / 60);
   },
 
   initAudio: function(pathToSong) {
@@ -84,12 +87,17 @@ var Titus = {
     i = 0;
     levels = fbcArray.length;
     sum = 0;
+    bassSum = 0;
 
     while (i < levels) {
       // Draw bar for sound levels
       ctx.fillRect(i, canvas.height-fbcArray[i], 1, fbcArray[i]);
+      
       // Sum array values
       sum += fbcArray[i];
+
+      // Sum bass values
+      if (i < levels / 8) bassSum += fbcArray[i];
       i += 1;
     }
 
@@ -127,40 +135,6 @@ var Titus = {
   },
 
   calcAvgBeatDiff: function() {
-    /*
-    var diffs = beatDiff.length;
-    var i = diffs - 10;
-    if (i < 0) {
-      i = 0;
-    }
-    deltaBeatDiff = [];
-
-    // If first 
-    while (i < diffs) {
-      var k = 0;
-      deltaBeatDiff[i] = [];
-      while (k < diffs) {
-        if (i - k > 0 && i - k < 10) {
-          deltaBeatDiff[i][k] = Math.abs(beatDiff[i] - beatDiff[k]);
-          if (deltaBeatDiff[i][k] < 10) {
-            beatHoldDelay = (beatDiff[i] + beatDiff[k]) / 2;
-            beatHoldDelay = Math.ceil(beatHoldDelay/5)*5;
-
-            if (accBeatDiff[beatHoldDelay.toString()]) {
-              accBeatDiff[beatHoldDelay.toString()]++;
-            } else {
-              accBeatDiff[beatHoldDelay.toString()] = 1;
-            }
-            this.fireBeatEvent();
-          }
-        }
-        k++;
-      }
-      i++;
-    }
-    */
-
-    // NEW
     var i = beatDiff.length - 1;
     if (i < 0) i = 0;
     var j = 0;

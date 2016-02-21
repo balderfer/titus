@@ -1,6 +1,6 @@
 $(document).ready(function() {
   
-  Titus.init('dist/audio/bangarang.mp3');
+  Titus.init('dist/audio/redforest.mp3');
 
   document.addEventListener('beat', function(e) {
     console.log("Beat fired!");
