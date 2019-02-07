@@ -12,19 +12,26 @@
     <link href='https://fonts.googleapis.com/css?family=Oswald:400,300,700' rel='stylesheet' type='text/css'>
 
     <!-- css -->
-    <link rel="stylesheet" href="dist/css/base.css" type="text/css">
+    <link rel="stylesheet" href="/css/base.css" type="text/css">
     
     <!-- js -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
   </head>
   <body id="titus">
 
-    Titus yo sup
-    <div id="titus-controls"></div>
-    <canvas id="visualizer"></canvas>
+    <div class="center-container">
+        <div class="container">
+            <form class="input-row" onsubmit="return startPlayer(event)">
+                <input type="text" id="musicsource" placeholder="http://benalderfer.com/boombox/sounds/sweetdreams.mp3">
+                <input type="submit" value="Play">
+            </form>
+            <canvas id="visualizer"></canvas>
+            <div id="animationContainer"></div>
+        </div>
+    </div>
 
 
-    <script src="dist/js/app.js"></script>
-    <script src="dist/js/titus.js"></script>
+    <script src="/js/main.js"></script>
+    <script src="/js/titus.js"></script>
   </body>
 </html>

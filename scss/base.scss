@@ -1,0 +1,137 @@
+/* --------------------------------------------------------------
+
+   reset.css
+   * Resets default browser CSS.
+
+-------------------------------------------------------------- */
+html, body, div, span, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, code,
+del, dfn, em, img, i, q, dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, dialog, figure, footer, header,
+hgroup, nav, section,
+input, select, textarea {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        font-weight: inherit;
+        font-style: inherit;
+        font-size: 100%;
+        font-family: inherit;
+        vertical-align: baseline; }
+
+ul li {
+        list-style-type: none; }
+
+article, aside, dialog, figure, footer, header,
+hgroup, nav, section {
+        display: block; }
+
+body {
+        line-height: 1.5; }
+
+/* Tables still need 'cellspacing="0"' in the markup. */
+table {
+        border-collapse: separate;
+        border-spacing: 0; }
+
+caption, th, td {
+        text-align: left;
+        font-weight: normal; }
+
+table, td, th {
+        vertical-align: middle; }
+
+/* Remove possible quote marks (") from <q>, <blockquote>. */
+blockquote:before, blockquote:after, q:before, q:after {
+        content: ""; }
+
+blockquote, q {
+        quotes: "" ""; }
+
+/* Remove annoying border on linked images. */
+a img {
+        border: none; }
+
+* {
+        box-sizing: border-box; }
+
+
+$black: #333333;
+$white: #ffffff;
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  color: $black;
+}
+
+.center-container {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  width: 620px;
+  height: 400px;
+  margin: 0 auto;
+  border: 1px solid $black;
+  display: flex;
+  flex-direction: column;
+  outline: 0px solid $black;
+  box-sizing: content-box;
+  border: 1px solid $black;
+  position: relative;
+
+  .input-row {
+    border-bottom: 1px solid $black;
+    display: flex;
+
+    input {
+      flex: 1;
+      padding: 12px;
+    }
+
+    input[type="submit"] {
+      background: $black;
+      color: $white;
+      flex: 0;
+    }
+  }
+
+  #visualizer {
+    flex: 1;
+  }
+
+  #animationContainer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    box-shadow: 0 0 0 0 $black;
+    background-color: $white;
+    box-sizing: content-box;
+    z-index: -1;
+
+    &.beat {
+      animation: beatOutline 0.25s ease-out forwards;
+    }
+  }
+  
+}
+
+@keyframes beatOutline {
+  0% {
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+  }
+  20% {
+    box-shadow: 0 0 0 100px rgba(231, 76, 60, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+  }
+}
+
